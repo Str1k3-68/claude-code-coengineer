@@ -1,0 +1,50 @@
+{
+  "_comment": "Drop these blocks into your ~/.claude/settings.json (or use the install.sh script which merges them automatically). The hooks key in YOUR settings.json should look like this — preserving any other hooks you already have.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/codex-coengineer/hook.py reset-turn",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/codex-coengineer/hook.py record-edit",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/codex-coengineer/hook.py record-codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/codex-coengineer/hook.py check-stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

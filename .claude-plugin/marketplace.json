@@ -1,0 +1,18 @@
+{
+  "name": "Str1k3-68-coengineer",
+  "owner": {
+    "name": "Str1k3-68"
+  },
+  "metadata": {
+    "description": "Personal Claude Code plugin marketplace for coengineering tooling.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-coengineer",
+      "description": "Stop-hook reminder to run codex exec for second-source review on specs, plans, and code phases.",
+      "source": "./",
+      "strict": true
+    }
+  ]
+}

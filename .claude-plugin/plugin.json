@@ -1,0 +1,68 @@
+{
+  "name": "claude-code-coengineer",
+  "version": "0.1.0",
+  "description": "Stop-hook reminder to run codex exec for second-source review on spec sheets, implementation plans, and every code phase. Catches the bugs the primary agent misses, before commit.",
+  "author": {
+    "name": "Str1k3-68"
+  },
+  "homepage": "https://github.com/Str1k3-68/claude-code-coengineer",
+  "repository": "https://github.com/Str1k3-68/claude-code-coengineer",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "coengineering",
+    "codex",
+    "second-source-review",
+    "hooks",
+    "stop-hook",
+    "spec-review",
+    "plan-review",
+    "code-review"
+  ],
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codex-coengineer/hook.py\" reset-turn",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codex-coengineer/hook.py\" record-edit",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codex-coengineer/hook.py\" record-codex",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codex-coengineer/hook.py\" check-stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
