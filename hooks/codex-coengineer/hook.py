@@ -230,6 +230,63 @@ _NON_TRIVIAL_EXTENSIONS = (
 )
 
 
+# System temp roots — a FIXED allowlist (deliberately NOT $TMPDIR; see
+# _is_under_temp_dir). Files under these are ephemeral scratch (never committed)
+# and always trivial. Anchored to ROOTS (not a substring) so a project's own
+# `tmp/` subdir is not over-matched.
+_SYSTEM_TEMP_DIR_ROOTS = (
+    "/tmp",
+    "/private/tmp",
+    "/var/tmp",
+    "/var/folders",          # macOS per-user temp/cache parent ($TMPDIR default)
+    "/private/var/folders",  # realpath of /var/folders
+)
+
+
+def _is_under_temp_dir(file_path: str) -> bool:
+    """True only for ABSOLUTE paths anchored under a known system temp root.
+
+    Ephemeral scratch (e.g. /tmp/foo.py, macOS /var/folders/.../T/foo.py) is never
+    committed, so it must not trip the coengineering reminder. Anchored to a FIXED
+    allowlist of system roots (not a substring, and deliberately NOT
+    ``tempfile.gettempdir()`` / ``$TMPDIR`` — a custom TMPDIR could point inside a
+    repo and over-trivialize real files; Codex verify finding 2026-05-31) so a
+    project's own ``tmp/`` subdir (``<repo>/tmp/real.py``) always stays non-trivial.
+    Compares both ``normpath`` and ``realpath`` variants so the macOS
+    ``/tmp`` -> ``/private/tmp`` symlink is handled. Relative paths are
+    project-relative and never temp.
+    """
+    if not file_path or not os.path.isabs(file_path):
+        return False
+
+    def _variants(path: str) -> set[str]:
+        out: set[str] = set()
+        try:
+            normalized = os.path.normpath(path)
+        except Exception:
+            normalized = path
+        if normalized and os.path.isabs(normalized) and normalized != "/":
+            out.add(normalized.rstrip("/"))
+        try:
+            resolved = os.path.realpath(normalized)
+            if resolved and os.path.isabs(resolved) and resolved != "/":
+                out.add(os.path.normpath(resolved).rstrip("/"))
+        except Exception:
+            pass
+        return out
+
+    path_variants = _variants(file_path)
+    root_variants: set[str] = set()
+    for root in _SYSTEM_TEMP_DIR_ROOTS:
+        root_variants.update(_variants(root))
+
+    for path in path_variants:
+        for root in root_variants:
+            if path == root or path.startswith(root + "/"):
+                return True
+    return False
+
+
 def _safe_exit_zero(*args, **kwargs):
     """Last-resort safety net: degrade to silent exit 0 on any error."""
     sys.exit(0)
@@ -280,6 +337,8 @@ _PLAN_PATH_RE = re.compile(r"(?:^|/)docs/superpowers/plans/[\w./\-]+\.md$")
 def _classify_spec_plan(file_path: str) -> str:
     """Return 'spec', 'plan', or '' if the path is neither."""
     if not file_path:
+        return ""
+    if _is_under_temp_dir(file_path):
         return ""
     normalized = _strip_home_prefix(file_path)
     if _SPEC_PATH_RE.search(normalized):
@@ -606,7 +665,13 @@ def _extract_reviewed_files(command: str) -> list[str]:
 
     # 2. Absolute paths normalized to repo-relative
     for m in _ABSOLUTE_PROJECT_PATH_RE.finditer(prompt):
-        normalized = _normalize_to_repo_relative(m.group(1))
+        abs_match = m.group(1)
+        # Temp scratch paths (e.g. /tmp/src/foo.py) must NOT normalize to a
+        # repo-relative path — that would falsely credit a real repo edit as
+        # reviewed (Codex verify finding 2026-05-31).
+        if _is_under_temp_dir(abs_match):
+            continue
+        normalized = _normalize_to_repo_relative(abs_match)
         if not _add(normalized):
             return out
 
@@ -668,6 +733,11 @@ def _is_non_trivial(file_path: str) -> bool:
     Claude Code rarely edits such paths in practice.
     """
     if not file_path:
+        return False
+
+    # System-temp scratch (e.g. /tmp/foo.py) is ephemeral and never committed —
+    # always trivial. Checked on the raw absolute path BEFORE _strip_home_prefix.
+    if _is_under_temp_dir(file_path):
         return False
 
     # Normalize: strip $HOME prefix so ancestor noise (e.g., /tmp/tests/...)

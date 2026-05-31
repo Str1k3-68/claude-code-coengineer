@@ -43,8 +43,9 @@ REAL_PATH_CASES = [
     # Absolute path under user home
     ('review /Users/example/Projects/sample_project/docs/superpowers/specs/X.md',
      ['docs/superpowers/specs/X.md']),
-    # Absolute path with project-dir name in tail
-    ('review /tmp/src/foo.py',                                 ['src/foo.py']),
+    # Absolute path with project-dir name in tail (non-temp prefix; /tmp is now
+    # special-cased as scratch — see the temp-exclusion cases below)
+    ('review /opt/ci/checkout/src/foo.py',                     ['src/foo.py']),
     # User dir name CONTAINS "src" but not as path component
     ('review /Users/user-with-src-in-name/x.py',               []),
     # Markdown link with relative target
@@ -55,6 +56,9 @@ REAL_PATH_CASES = [
      ['hooks/codex-coengineer/hook.py']),
     ('review /Users/example/Projects/sample_project/hooks/codex-coengineer/hook.py',
      ['hooks/codex-coengineer/hook.py']),
+    # 2026-05-31 (Codex verify) — temp absolute paths must NOT credit real repo files
+    ('review /tmp/src/foo.py',                                 []),
+    ('review /tmp/docs/superpowers/specs/X.md',                []),
 ]
 
 
@@ -385,6 +389,28 @@ def test_hooks_dir_extractor_only_not_classifier():
     # Extensionless hook files stay TRIVIAL — no uncoverable false positive
     assert hook._is_non_trivial('hooks/pre-commit') is False
     assert hook._is_non_trivial('hooks/post-merge') is False
+
+
+def test_system_temp_files_are_trivial():
+    """System-temp scratch (e.g. /tmp/foo.py) is ephemeral and never committed,
+    so it must be trivial — but a project's own tmp/ subdir must NOT be
+    over-matched. The classifier uses a FIXED system-root allowlist, never
+    $TMPDIR, so a custom TMPDIR pointing inside a repo cannot over-trivialize real
+    files. (Soft-hook false-fire finding + Codex verify, 2026-05-31.)"""
+    # Absolute paths under known system temp roots -> trivial
+    assert hook._is_non_trivial('/tmp/mk_proposal.py') is False
+    assert hook._is_non_trivial('/private/tmp/scratch.py') is False
+    assert hook._is_non_trivial('/var/tmp/scratch.py') is False
+    assert hook._is_non_trivial('/var/folders/ab/cd/T/scratch.py') is False  # macOS default
+    # spec/plan under temp also de-classified (consistent guard)
+    assert hook._classify_spec_plan('/tmp/docs/superpowers/specs/X.md') == ''
+    # A project's own tmp/ subdir is NOT over-matched -> stays non-trivial
+    # (bulletproof: the impl uses a fixed allowlist and never reads $TMPDIR)
+    assert hook._is_non_trivial(
+        '/Users/example/Projects/sample_project/tmp/real.py'
+    ) is True
+    # relative + real code paths unaffected
+    assert hook._is_non_trivial('src/foo.py') is True
 
 
 if __name__ == "__main__":
