@@ -928,9 +928,12 @@ def cmd_check_stop() -> int:
         "the user commits. Capture pattern (see ~/.claude/CLAUDE.md):\n"
         "  codex exec --skip-git-repo-check -c model_reasoning_effort=xhigh \\\n"
         "      \"$(cat <prompt-template>)\" > /tmp/codex.log 2>&1 < /dev/null\n\n"
-        "If this work is genuinely trivial enough to skip Codex, say so "
-        "explicitly in your next response and the user can decide. "
-        "Single-fire reminder — won't block again on this stop sequence."
+        "Run it now. Do NOT skip by declaring the work trivial or circular; "
+        "the items above already matched this hook's review criteria. If a "
+        "separately configured hard stop-review gate is present, it will run "
+        "Codex regardless. Single-fire reminder — this hook won't block again "
+        "on this stop sequence; the only legitimate skip is codex exec being "
+        "genuinely unavailable (state the availability failure and proceed)."
     )
 
     # Block once via JSON output

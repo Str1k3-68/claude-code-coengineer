@@ -143,7 +143,7 @@ The block message tells the agent (and surfaces to the user): "you modified N fi
 
 ### Reliability principle
 
-The hook is **telemetry, not enforcement**. Any error path (missing file, jq absent, JSON parse error) degrades to silent exit 0. Never break Claude Code itself for a coengineering miss. The block message is Claude-visible feedback; if the agent has good reason to skip codex (truly trivial change, codex unavailable), it can say so explicitly in its next message and the user decides.
+The hook is **telemetry, not enforcement**. Any error path (missing file, jq absent, JSON parse error) degrades to silent exit 0. Never break Claude Code itself for a coengineering miss. The block message is Claude-visible feedback directing the agent to run `codex exec` before the user commits. The agent must not skip by declaring the work trivial or circular: anything shown in the block message already matched the hook's review criteria. If a separate hard review gate is configured, that gate provides enforcement and may run Codex regardless of this soft reminder. The only legitimate skip for this hook message is `codex exec` being genuinely unavailable; the single-fire design ensures that case does not deadlock Claude Code.
 
 ### Source for the hook
 
@@ -265,7 +265,7 @@ Codex makes mistakes. Today (2026-05-03) Codex correctly identified that my GitH
 
 ### Failure: "The hook is annoying / blocks too often"
 
-Tune the trivial filter. Test-only edits, README typos, comment-only edits, removing dead imports — these don't need coengineering. Add path patterns to the hook's trivial-edit list.
+Tune the trivial filter — the fix belongs up front in the classifier, not in an ad-hoc escape after a block fires. Test-only edits, README typos, comment-only edits, removing dead imports — these don't need coengineering. Add path patterns to the hook's trivial-edit list so they never fire, rather than declaring work trivial once the block appears.
 
 ### Failure: "I can't tell if a coengineering pass actually happened"
 
@@ -289,7 +289,7 @@ Each step's prompt is just a markdown file you `cat` into the codex command. Bui
 
 ## 7. Tradeoffs
 
-- **Cost:** Codex xhigh on a substantive review burns ~50K-200K tokens per pass. At current pricing this is non-trivial. The bug-catch rate makes it worth it for production-affecting work; skip it for prototypes and experiments.
+- **Cost:** Codex xhigh on a substantive review burns ~50K-200K tokens per pass. At current pricing this is non-trivial. The bug-catch rate makes it worth it for production-affecting work; scope prototypes and experiments out up front via the trivial classifier or project config — not by skipping a review after the hook has already fired.
 - **Latency:** Each pass takes 30-120 seconds. A multi-pass plan review can add 10-15 minutes to a session. Real, but small compared to a missed bug.
 - **Cognitive load:** You're running two agents in parallel. Don't do this for trivial work — the overhead exceeds the value.
 - **Trust calibration:** Codex disagreements with the primary agent are signal. Most disagreements I've seen surface real bugs in the primary agent's reasoning. A few have been Codex hallucinations. Spend the cycles to figure out which.

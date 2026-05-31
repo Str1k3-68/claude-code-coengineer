@@ -37,7 +37,7 @@ Both sections fire together when both apply, in one combined block.
 
 Claude Code's Stop hook protocol provides `stop_hook_active: bool` in the input. If True, this hook already blocked once this stop sequence — exit 0 to allow the stop and prevent infinite loops. The hook respects this strictly.
 
-The block message itself signals the same: "Single-fire reminder — won't block again on this stop sequence." Claude can either run codex and re-stop cleanly, or explicitly say "skipping codex because trivial" and let the user decide.
+The block message itself signals the same: "Single-fire reminder — won't block again on this stop sequence." Claude should run codex and re-stop cleanly. It must not talk its way out by declaring the work trivial — anything flagged already matched the hook's review criteria. The only legitimate skip is `codex exec` being genuinely unavailable; if a separate hard review gate is configured, it enforces a real Codex pass regardless.
 
 ## Path extraction from codex prompts
 
