@@ -167,6 +167,7 @@ _NON_TRIVIAL_DIRS = (
     "reference",
     "symphonies",
     "tools",         # added in v3 for the hook itself + collaborator docs
+    "hooks",         # 2026-05-31: hook scripts live here; credit their codex reviews
 )
 
 _TRIVIAL_DIRS = (

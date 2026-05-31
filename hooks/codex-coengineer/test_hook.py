@@ -50,6 +50,11 @@ REAL_PATH_CASES = [
     # Markdown link with relative target
     ('see [relative](docs/superpowers/specs/X.md)',
      ['docs/superpowers/specs/X.md']),
+    # 2026-05-31 — hooks/ credited so codex reviews of the hook itself count
+    ('review hooks/codex-coengineer/hook.py',
+     ['hooks/codex-coengineer/hook.py']),
+    ('review /Users/example/Projects/sample_project/hooks/codex-coengineer/hook.py',
+     ['hooks/codex-coengineer/hook.py']),
 ]
 
 
