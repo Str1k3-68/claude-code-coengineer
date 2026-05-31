@@ -167,7 +167,6 @@ _NON_TRIVIAL_DIRS = (
     "reference",
     "symphonies",
     "tools",         # added in v3 for the hook itself + collaborator docs
-    "hooks",         # 2026-05-31: hook scripts live here; credit their codex reviews
 )
 
 _TRIVIAL_DIRS = (
@@ -324,11 +323,19 @@ def _is_real_codex_invocation(command: str) -> bool:
 
 # Union of all project directories the path extractor should recognize.
 # v3: derived from the unified _NON_TRIVIAL_DIRS + _TRIVIAL_DIRS source so
-# the extractor can never drift away from the classifier. Also includes
-# 'results' explicitly because results/foo.json (calibration outputs) is
-# meaningful even though we don't classify it via dir walk.
+# the extractor can never drift away from the classifier. Also includes a few
+# extractor-only dirs (NOT in the classifier lists) so their paths are credited
+# in codex prompts without changing dir-walk classification:
+#   - 'results': results/foo.json (calibration outputs) is meaningful, but only
+#     specific subdirs are trivial (handled via _ALWAYS_TRIVIAL_SUBSTRINGS).
+#   - 'hooks': credit codex reviews of hook files (hooks/.../hook.py). Kept
+#     extractor-only on purpose — making it a classifier dir would mark
+#     EXTENSIONLESS hook files (e.g. hooks/pre-commit) non-trivial while the
+#     extension-required extractor could never credit them, a permanent
+#     uncoverable false positive. .py/.sh hook files stay non-trivial via the
+#     extension fallback. (Codex stop-gate finding, 2026-05-31.)
 _PROJECT_DIRS = tuple(sorted(set(
-    _NON_TRIVIAL_DIRS + _TRIVIAL_DIRS + ("results", "schema", "migrations")
+    _NON_TRIVIAL_DIRS + _TRIVIAL_DIRS + ("results", "schema", "migrations", "hooks")
 )))
 _PROJECT_DIRS_RE = "|".join(_PROJECT_DIRS)
 

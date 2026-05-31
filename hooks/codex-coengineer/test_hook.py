@@ -369,6 +369,24 @@ def test_spec_plan_classifier():
     assert not fails, f"classifier failed on: {fails}"
 
 
+def test_hooks_dir_extractor_only_not_classifier():
+    """`hooks` is extractor-only (Codex stop-gate finding 2026-05-31): codex
+    reviews of hook source files must be credited, but `hooks` must NOT be a
+    classifier dir — that would mark EXTENSIONLESS hook files (e.g.
+    hooks/pre-commit) non-trivial while the extension-required extractor could
+    never credit them, a permanent uncoverable false positive."""
+    # Extractor credits reviews of hook source files (they have extensions)
+    assert hook._extract_reviewed_files(
+        'review hooks/codex-coengineer/hook.py'
+    ) == ['hooks/codex-coengineer/hook.py']
+    # .py / .sh hook files stay non-trivial via the extension fallback
+    assert hook._is_non_trivial('hooks/codex-coengineer/hook.py') is True
+    assert hook._is_non_trivial('hooks/setup.sh') is True
+    # Extensionless hook files stay TRIVIAL — no uncoverable false positive
+    assert hook._is_non_trivial('hooks/pre-commit') is False
+    assert hook._is_non_trivial('hooks/post-merge') is False
+
+
 if __name__ == "__main__":
     print("=== URL-leak regression ===")
     p1, n1 = _check(URL_LEAK_CASES, "url-leak")
